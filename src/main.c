@@ -21,13 +21,13 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
-#include <stdio.h>
-#include <inttypes.h>
-#include <stdbool.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include "mu_1sf_driver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -80,6 +80,20 @@ void ConsoleUint32Print(UART_HandleTypeDef *huart, uint32_t val, uint8_t size, b
     HAL_UART_Transmit(huart, end, sizeof(end), 100);
   }
 }
+
+void mu_spi_transfer(uint8_t *data_tx, uint8_t *data_rx, uint16_t datasize)
+{
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+  //HAL_SPI_Transmit(&hspi3, data_tx, sizeof(*data_tx)*datasize, 100);
+  HAL_SPI_TransmitReceive(&hspi3, data_tx, data_rx, sizeof(*data_tx)*datasize, 100);
+  // for(uint8_t i=0; i<4; i++)
+  // {
+  //   // is for loop necessay; can get data back at a single time
+  //   HAL_SPI_Receive(&hspi3, &(data_rx[i]), sizeof(uint8_t), 100);      
+  // }
+  //HAL_SPI_Receive(&hspi3, data_rx, 8*datasize, 100);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+}
 /* USER CODE END 0 */
 
 /**
@@ -122,15 +136,18 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    uint8_t txData = 0xA6;
-    uint8_t rxData[5] = {};
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
-    HAL_SPI_Transmit(&hspi3, &txData, sizeof(txData), 100);
-    for(uint8_t i=0; i<4; i++)
-    {
-      HAL_SPI_Receive(&hspi3, &(rxData[i]), sizeof(uint8_t), 100);      
-    }
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+    // uint8_t txData = 0xA6;
+    // uint8_t rxData[5] = {};
+    // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
+    // HAL_SPI_Transmit(&hspi3, &txData, sizeof(txData), 100);
+    // for(uint8_t i=0; i<4; i++)
+    // {
+    //   HAL_SPI_Receive(&hspi3, &(rxData[i]), sizeof(uint8_t), 100);      
+    // }
+    // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+
+    uint8_t DATA_RX[3] = {};
+    mu_sdad_transmission(DATA_RX, sizeof(DATA_RX)/sizeof(DATA_RX[0]));
 
     // Assuming a 19 bit precision
     // The encoder outputs a 19 bit resolution value. I observed that the 
@@ -141,9 +158,9 @@ int main(void)
     // If this is the case then the number of pole pairs in the given encoder 
     // ring is 32. With a magnetic film this hypothesis can be confirmed.
     uint32_t val = (
-      (((uint32_t)rxData[2]) >> 5) | 
-      (((uint32_t)rxData[1]) << 3) | 
-      (((uint32_t)rxData[0]) << 11)
+      (((uint32_t)DATA_RX[2]) >> 5) | 
+      (((uint32_t)DATA_RX[1]) << 3) | 
+      (((uint32_t)DATA_RX[0]) << 11)
     );
     ConsoleUint32Print(&huart2, val, 20, true);
     HAL_Delay(100);
