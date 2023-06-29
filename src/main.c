@@ -37,7 +37,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define ENC_SPI_NCS_PORT GPIOC
+#define ENC_SPI_NCS_PIN GPIO_PIN_1
+#define ENC_SPI &hspi3
+#define ENC_SPI_TIMEOUT 100
+#define ENC_RX_DATA_SIZE_BYTES 3
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -83,16 +87,14 @@ void ConsoleUint32Print(UART_HandleTypeDef *huart, uint32_t val, uint8_t size, b
 
 void mu_spi_transfer(uint8_t *data_tx, uint8_t *data_rx, uint16_t datasize)
 {
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
-  //HAL_SPI_Transmit(&hspi3, data_tx, sizeof(*data_tx)*datasize, 100);
-  HAL_SPI_TransmitReceive(&hspi3, data_tx, data_rx, sizeof(*data_tx)*datasize, 100);
-  // for(uint8_t i=0; i<4; i++)
-  // {
-  //   // is for loop necessay; can get data back at a single time
-  //   HAL_SPI_Receive(&hspi3, &(data_rx[i]), sizeof(uint8_t), 100);      
-  // }
-  //HAL_SPI_Receive(&hspi3, data_rx, 8*datasize, 100);
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(ENC_SPI_NCS_PORT, ENC_SPI_NCS_PIN, GPIO_PIN_RESET);
+  HAL_SPI_TransmitReceive(ENC_SPI, data_tx, data_rx, sizeof(*data_tx)*datasize, ENC_SPI_TIMEOUT);
+  HAL_GPIO_WritePin(ENC_SPI_NCS_PORT, ENC_SPI_NCS_PIN, GPIO_PIN_SET);
+}
+
+void my_wait_us(uint16_t time_us)
+{
+  // TO-IMPLEMENT REGISTER READ/WRITE OPERATIOSN
 }
 /* USER CODE END 0 */
 
@@ -135,18 +137,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    /* USER CODE END WHILE */
-    // uint8_t txData = 0xA6;
-    // uint8_t rxData[5] = {};
-    // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_RESET);
-    // HAL_SPI_Transmit(&hspi3, &txData, sizeof(txData), 100);
-    // for(uint8_t i=0; i<4; i++)
-    // {
-    //   HAL_SPI_Receive(&hspi3, &(rxData[i]), sizeof(uint8_t), 100);      
-    // }
-    // HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
-
-    uint8_t DATA_RX[3] = {};
+    uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
     mu_sdad_transmission(DATA_RX, sizeof(DATA_RX)/sizeof(DATA_RX[0]));
 
     // Assuming a 19 bit precision
