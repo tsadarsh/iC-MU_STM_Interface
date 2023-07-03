@@ -21,6 +21,7 @@
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
+#include "tim.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -92,9 +93,10 @@ void mu_spi_transfer(uint8_t *data_tx, uint8_t *data_rx, uint16_t datasize)
   HAL_GPIO_WritePin(ENC_SPI_NCS_PORT, ENC_SPI_NCS_PIN, GPIO_PIN_SET);
 }
 
-void my_wait_us(uint16_t time_us)
+void mu_wait_us(uint16_t time_us)
 {
-  // TO-IMPLEMENT REGISTER READ/WRITE OPERATIOSN
+  __HAL_TIM_SET_COUNTER(&htim4, 0);
+  while(__HAL_TIM_GET_COUNTER(&htim4) < time_us);
 }
 /* USER CODE END 0 */
 
@@ -129,8 +131,9 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI3_Init();
   MX_USART1_UART_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
-
+  HAL_TIM_Base_Start(&htim4);
   /* USER CODE END 2 */
 
   /* Infinite loop */
