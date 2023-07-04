@@ -78,11 +78,11 @@ void ConsoleUint32Print(UART_HandleTypeDef *huart, uint32_t val, uint8_t size, b
     str[i] = 0;
   }
   sprintf(str, "%u", val);
-  HAL_UART_Transmit(huart, str, sizeof(str), 100);
+  HAL_UART_Transmit(huart, (uint8_t *)str, sizeof(str), 100);
   if (newline)
   {
-    char end[]="\n\r";
-    HAL_UART_Transmit(huart, end, sizeof(end), 100);
+    char end[]="\r\n";
+    HAL_UART_Transmit(huart, (uint8_t *)end, sizeof(end), 100);
   }
 }
 
