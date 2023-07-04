@@ -47,7 +47,17 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
 
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -64,28 +74,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int fputc(int ch, FILE *f)
-{
-    HAL_UART_Transmit(&huart1, (unsigned char *)&ch, 1, 100);
-    return ch;
-}
-
-void ConsoleUint32Print(UART_HandleTypeDef *huart, uint32_t val, uint8_t size, bool newline)
-{
-  char str[size];
-  for(int i=0; i<size; i++)
-  {
-    str[i] = 0;
-  }
-  sprintf(str, "%u", val);
-  HAL_UART_Transmit(huart, (uint8_t *)str, sizeof(str), 100);
-  if (newline)
-  {
-    char end[]="\r\n";
-    HAL_UART_Transmit(huart, (uint8_t *)end, sizeof(end), 100);
-  }
-}
-
 void mu_spi_transfer(uint8_t *data_tx, uint8_t *data_rx, uint16_t datasize)
 {
   HAL_GPIO_WritePin(ENC_SPI_NCS_PORT, ENC_SPI_NCS_PIN, GPIO_PIN_RESET);
@@ -156,7 +144,7 @@ int main(void)
       (((uint32_t)DATA_RX[1]) << 3) | 
       (((uint32_t)DATA_RX[0]) << 11)
     );
-    ConsoleUint32Print(&huart2, val, 20, true);
+    printf("%lu\r\n", val);
     HAL_Delay(100);
     /* USER CODE BEGIN 3 */
   }
