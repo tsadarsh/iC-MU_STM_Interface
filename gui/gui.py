@@ -44,14 +44,19 @@ def serial_write(data):
 	global ser
 	ser.write(data)
 
+def serial_read():
+	global ser
+	return ser.read_until()
+
 def restart_serial(sender, app_data):
 	print("restarting...")
-	print(app_data)
+	print(dpg.get_value("input_port_address"))
 	global ser
 	try:
 		ser = serial.Serial(port=dpg.get_value("input_port_address"), baudrate=115200)
 		_update_dynamic_textures("success")
 	except serial.serialutil.SerialException:
+		ser = None
 		_update_dynamic_textures("fail")
 	
 
@@ -60,7 +65,7 @@ def activateCallback(sender, app_data):
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
 with dpg.window(label="Interact"):
-	dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0", callback=restart_serial)
+	dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0")
 	dpg.add_image(texture_tag="image_port_status_indicator")
 	dpg.add_button(tag="button_connect", label="Connect", callback=restart_serial)
 	dpg.add_text(tag="text_counter", label="Start")
@@ -73,13 +78,13 @@ dpg.show_viewport()
 restart_serial(None, None)
 while dpg.is_dearpygui_running():
 	CMD_T0_SEND = 'A6'
-	#ser.write(bytes.fromhex(CMD_T0_SEND))
-	serial_write(bytes.fromhex(CMD_T0_SEND))
-	data = ser.read_until().decode()
-	print(data[1:])
-	dpg.set_value("text_counter", data)
-	if data[0] == 'd':
-		plot.update_data([[float(data[1:])]])
+	if ser is not None:
+		serial_write(bytes.fromhex(CMD_T0_SEND))
+		data = serial_read().decode()
+		print(data[1:])
+		dpg.set_value("text_counter", data)
+		if data[0] == 'd':
+			plot.update_data([[float(data[1:])]])
 	plot.update_plot()
 	dpg.render_dearpygui_frame()
 dpg.destroy_context()
