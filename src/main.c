@@ -133,8 +133,8 @@ int main(void)
   {
     /* USER CODE BEGIN 3 */
     uint8_t cmd = readCMD();
-    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-    HAL_Delay(100);
+    //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    //HAL_Delay(100);
     //printf("%d\r\n", sizeof(cmdData));
     /* USER CODE END 3 */
 

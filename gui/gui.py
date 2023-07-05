@@ -7,6 +7,8 @@ import status_color as col
 
 CMD_T0_SEND = 'A6'
 ser = None
+PLOT_DATA_BATCH_SIZE = 10
+plot_data_buffer = []
 dpg.create_context()
 dpg.create_viewport(title='iC-MU Debug Tool')
 
@@ -28,6 +30,14 @@ def serial_write(data):
 def serial_read():
 	global ser
 	return ser.read_until()
+
+def plot_data_in_batch(data):
+	global plot_data_buffer, PLOT_DATA_BATCH_SIZE
+	if len(plot_data_buffer) > PLOT_DATA_BATCH_SIZE:
+		plot.update_data([plot_data_buffer])
+		plot_data_buffer = []
+	else:
+		plot_data_buffer.append(data)
 
 def restart_serial(sender, app_data):
 	print("restarting...")
@@ -68,6 +78,7 @@ while dpg.is_dearpygui_running():
 		print(data[1:])
 		dpg.set_value("text_counter", data)
 		if data[0] == 'd':
+			#plot_data_in_batch(float(data[1:]))
 			plot.update_data([[float(data[1:])]])
 	plot.update_plot()
 	dpg.render_dearpygui_frame()
