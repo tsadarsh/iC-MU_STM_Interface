@@ -10,12 +10,13 @@ dpg.create_viewport(title='iC-MU Debug Tool')
 
 texture_data = []
 for i in range(0, 10 * 10):
-    texture_data.append(255 / 255)
     texture_data.append(255)
-    texture_data.append(255 / 255)
-    texture_data.append(255 / 255)
+    texture_data.append(0)
+    texture_data.append(0)
+    texture_data.append(255)
 with dpg.texture_registry(show=False):
-	dpg.add_dynamic_texture(width=10, height=10, default_value=texture_data, tag="UART_PORT_STATUS")
+	dpg.add_dynamic_texture(width=10, height=10, default_value=texture_data, 
+			 tag="UART_PORT_STATUS")
 
 def _update_dynamic_textures(status):
 	if status == "success":
@@ -43,13 +44,16 @@ def restart_serial(sender, app_data):
 	print(app_data)
 	global ser
 	try:
-		ser = serial.Serial(port=app_data, baudrate=115200)
+		ser = serial.Serial(port=dpg.get_value("port_address"), baudrate=115200)
 		_update_dynamic_textures("success")
 	except serial.serialutil.SerialException:
 		_update_dynamic_textures("fail")
 	
 
 def activateCallback(sender, app_data):
+	global ser
+	#ser.open()
+	print(ser)
 	CMD_T0_SEND = 'A6'
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
@@ -60,8 +64,9 @@ def activateCallback(sender, app_data):
 	dpg.set_value("tick", data.decode())
 
 with dpg.window(label="Interact"):
-	dpg.add_input_text(default_value="/dev/ttyACM0", callback=restart_serial)
+	dpg.add_input_text(tag="port_address", default_value="/dev/ttyACM0", callback=restart_serial)
 	dpg.add_image("UART_PORT_STATUS")
+	dpg.add_button(label="Connect", tag="connect", callback=restart_serial)
 	dpg.add_text("Start", tag="tick")
 	dpg.add_button(label="UPDATE", tag="update", callback=activateCallback)
 
