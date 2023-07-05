@@ -51,17 +51,14 @@ def restart_serial(sender, app_data):
 	
 
 def activateCallback(sender, app_data):
-	global ser
-	#ser.open()
-	print(ser)
-	CMD_T0_SEND = 'A6'
+	CMD_T0_SEND = 'F5'
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
 	# Read until an expected sequence is found (‘\n’ by default)
-	data = ser.read_until()
+	#data = ser.read_until()
 	
-	print(data)
-	dpg.set_value("tick", data.decode())
+	#print(data)
+	#dpg.set_value("tick", data.decode())
 
 with dpg.window(label="Interact"):
 	dpg.add_input_text(tag="port_address", default_value="/dev/ttyACM0", callback=restart_serial)
@@ -72,15 +69,15 @@ with dpg.window(label="Interact"):
 
 dpg.setup_dearpygui()
 dpg.show_viewport()
-dpg.start_dearpygui()
-# while dpg.is_dearpygui_running():
-# 	#ser.write(bytes.fromhex(CMD_T0_SEND))
-# 	#CMD_T0_SEND = 'A6'
-# 	data = ser.readline()
-# 	print(data)
-# 	#data = str(data.decode('utf-8')[:-2])
-# 	#dpg.set_value("tick", data)
-# 	dpg.render_dearpygui_frame()
+#dpg.start_dearpygui()
+restart_serial(None, None)
+while dpg.is_dearpygui_running():
+	CMD_T0_SEND = 'A6'
+	ser.write(bytes.fromhex(CMD_T0_SEND))
+	data = ser.read_until()
+	print(data)
+	dpg.set_value("tick", data.decode())
+	dpg.render_dearpygui_frame()
 dpg.destroy_context()
 
 ser.close()

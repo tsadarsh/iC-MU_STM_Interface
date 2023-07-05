@@ -161,7 +161,7 @@ uint8_t readCMD()
     //HAL_UART_Transmit(&huart2, (uint8_t *)"I got: ", 7, 10);
     //printf("%d\r\n", cmdData);
     if(cmdData == 0xA6)
-      printf("%lu\r\n", get_encoder_data());
+      printf("d%lu\r\n", get_encoder_data());
     else
       printf("fals\r\n");
     //printf("\r\n");
