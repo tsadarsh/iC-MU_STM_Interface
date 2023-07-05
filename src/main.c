@@ -65,6 +65,7 @@ PUTCHAR_PROTOTYPE
 /* USER CODE BEGIN PV */
 bool CMD_RECEIVED = false;
 uint8_t cmdData = 0;
+uint8_t sdadStatus;
 uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
 /* USER CODE END PV */
 
@@ -132,7 +133,7 @@ int main(void)
   while (1)
   {
     /* USER CODE BEGIN 3 */
-    uint8_t cmd = readCMD();
+    readCMD();
     //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     //HAL_Delay(100);
     //printf("%d\r\n", sizeof(cmdData));
@@ -164,10 +165,15 @@ uint8_t readCMD()
       // ACTIVATE
     }
     else if(cmdData == 0xA6)
+    {
+      // SDAD Transmission
       printf("d%lu\r\n", get_encoder_data());
+    }
     else if(cmdData == 0xF5)
     {
       // SDAD Status (No latch)
+      mu_sdad_status(&sdadStatus, 1);
+      printf("s%d\r\n", sdadStatus);
     }
     else if (cmdData == 0x97)
     {
