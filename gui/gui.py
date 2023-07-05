@@ -45,7 +45,7 @@ def activateCallback(sender, app_data):
 	CMD_T0_SEND = '32'
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
-with dpg.window(label="Interact", autosize=True):
+with dpg.window(tag="window_interact", label="Interact", autosize=True):
 	with dpg.group(tag="group_input_port_address", horizontal=True):
 		dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0")
 		dpg.add_image(texture_tag="image_port_status_indicator")
@@ -54,6 +54,7 @@ with dpg.window(label="Interact", autosize=True):
 	dpg.add_button(tag="button_update", label="UPDATE", callback=activateCallback)
 
 plot = TimeSeriesWindow("plot", ["pos"])
+dpg.configure_item("plot"+"_win", pos=[250, 0])
 
 dpg.setup_dearpygui()
 dpg.show_viewport()
