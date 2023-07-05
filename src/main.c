@@ -63,13 +63,15 @@ PUTCHAR_PROTOTYPE
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
+bool CMD_RECEIVED = false;
+uint8_t cmdData = 0;
+uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+uint8_t readCMD(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -122,33 +124,55 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim4);
+  HAL_UART_Receive_IT(&huart2, &cmdData, sizeof(cmdData));
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
-    mu_sdad_transmission(DATA_RX, sizeof(DATA_RX)/sizeof(DATA_RX[0]));
+    /* USER CODE BEGIN 3 */
+    uint8_t cmd = readCMD();
+    HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
+    HAL_Delay(100);
+    //printf("%d\r\n", sizeof(cmdData));
+    /* USER CODE END 3 */
 
-    // Assuming a 19 bit precision
-    // The encoder outputs a 19 bit resolution value. I observed that the 
-    // third byte of the three data bytes data from the encoder constantly 
-    // switches between 224, 192, 160, 128, 96, 64 and 32. All these values 
-    // are in the (binary) form of XXX00000. So the total significant digits 
-    // are the 3 (X) bits + 2 bytes = 19 bits. 
-    // If this is the case then the number of pole pairs in the given encoder 
-    // ring is 32. With a magnetic film this hypothesis can be confirmed.
-    uint32_t val = (
+  }
+}
+
+uint32_t get_encoder_data() {
+  mu_sdad_transmission(DATA_RX, sizeof(DATA_RX)/sizeof(DATA_RX[0]));
+  uint32_t val = (
       (((uint32_t)DATA_RX[2]) >> 5) | 
       (((uint32_t)DATA_RX[1]) << 3) | 
       (((uint32_t)DATA_RX[0]) << 11)
-    );
-    printf("%lu\r\n", val);
-    HAL_Delay(100);
-    /* USER CODE BEGIN 3 */
+  );
+  return val;
+}
+
+uint8_t readCMD()
+{
+  uint8_t retVal = -1;
+  if (CMD_RECEIVED==true)
+  {
+    CMD_RECEIVED = false;
+    HAL_UART_Receive_IT(&huart2, &cmdData, sizeof(cmdData));
+    //HAL_UART_Transmit(&huart2, (uint8_t *)"I got: ", 7, 10);
+    //printf("%d\r\n", cmdData);
+    if(cmdData == 0xA6)
+      printf("%lu\r\n", get_encoder_data());
+    else
+      printf("fals\r\n");
+    //printf("\r\n");
+    retVal = 1;
   }
-  /* USER CODE END 3 */
+  return retVal;
+}
+
+void HAL_UART_RxCpltCallback (UART_HandleTypeDef * huart)
+{
+  CMD_RECEIVED = true;
 }
 
 /**
