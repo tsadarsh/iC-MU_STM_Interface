@@ -1,44 +1,25 @@
 import dearpygui.dearpygui as dpg
 import serial
-import re
 from time import sleep
 from RTPWindows import TimeSeriesWindow
+
+import status_color as col
 
 CMD_T0_SEND = 'A6'
 ser = None
 dpg.create_context()
 dpg.create_viewport(title='iC-MU Debug Tool')
 
-texture_data = []
-for i in range(0, 10 * 10):
-    texture_data.append(255)
-    texture_data.append(0)
-    texture_data.append(0)
-    texture_data.append(255)
 with dpg.texture_registry(show=False):
-	dpg.add_dynamic_texture(width=10, height=10, default_value=texture_data, 
+	dpg.add_dynamic_texture(width=10, height=10, default_value=col.red(), 
 			 tag="image_port_status_indicator")
 
 def _update_dynamic_textures(status):
 	if status == "success":
-		new_texture_data = []
-		for i in range(0, 10 * 10):
-			new_texture_data.append(0)
-			new_texture_data.append(255)
-			new_texture_data.append(0)
-			new_texture_data.append(255)
-
-		dpg.set_value("image_port_status_indicator", new_texture_data)
+		dpg.set_value("image_port_status_indicator", col.green())
 	
 	if status == "fail":
-		new_texture_data = []
-		for i in range(0, 10 * 10):
-			new_texture_data.append(255)
-			new_texture_data.append(0)
-			new_texture_data.append(0)
-			new_texture_data.append(255)
-
-		dpg.set_value("image_port_status_indicator", new_texture_data)
+		dpg.set_value("image_port_status_indicator", col.red())
 
 def serial_write(data):
 	global ser
@@ -64,18 +45,20 @@ def activateCallback(sender, app_data):
 	CMD_T0_SEND = '32'
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
-with dpg.window(label="Interact"):
-	dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0")
-	dpg.add_image(texture_tag="image_port_status_indicator")
+with dpg.window(label="Interact", autosize=True):
+	with dpg.group(tag="group_input_port_address", horizontal=True):
+		dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0")
+		dpg.add_image(texture_tag="image_port_status_indicator")
 	dpg.add_button(tag="button_connect", label="Connect", callback=restart_serial)
 	dpg.add_text(tag="text_counter", label="Start")
 	dpg.add_button(tag="button_update", label="UPDATE", callback=activateCallback)
-	plot = TimeSeriesWindow("plot", ["encoder"])
+
+plot = TimeSeriesWindow("plot", ["pos"])
 
 dpg.setup_dearpygui()
 dpg.show_viewport()
 #dpg.start_dearpygui()
-restart_serial(None, None)
+#restart_serial(None, None)
 while dpg.is_dearpygui_running():
 	CMD_T0_SEND = 'A6'
 	if ser is not None:
