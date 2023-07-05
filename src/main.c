@@ -158,13 +158,31 @@ uint8_t readCMD()
   {
     CMD_RECEIVED = false;
     HAL_UART_Receive_IT(&huart2, &cmdData, sizeof(cmdData));
-    //HAL_UART_Transmit(&huart2, (uint8_t *)"I got: ", 7, 10);
-    //printf("%d\r\n", cmdData);
-    if(cmdData == 0xA6)
+
+    if (cmdData == 0xB0)
+    {
+      // ACTIVATE
+    }
+    else if(cmdData == 0xA6)
       printf("d%lu\r\n", get_encoder_data());
+    else if(cmdData == 0xF5)
+    {
+      // SDAD Status (No latch)
+    }
+    else if (cmdData == 0x97)
+    {
+      // Read REGISTER (single)
+    }
+    else if (cmdData == 0xD2)
+    {
+      // Write REGISTER (single)
+    }
+    else if (cmdData == 0xAD)
+    {
+      // REGISTER status/data
+    }
     else
-      printf("fals\r\n");
-    //printf("\r\n");
+      printf("Error!\r\n");
     retVal = 1;
   }
   return retVal;
