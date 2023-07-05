@@ -2,6 +2,7 @@ import dearpygui.dearpygui as dpg
 import serial
 import re
 from time import sleep
+from RTPWindows import TimeSeriesWindow
 
 CMD_T0_SEND = 'A6'
 ser = None
@@ -39,6 +40,10 @@ def _update_dynamic_textures(status):
 
 		dpg.set_value("image_port_status_indicator", new_texture_data)
 
+def serial_write(data):
+	global ser
+	ser.write(data)
+
 def restart_serial(sender, app_data):
 	print("restarting...")
 	print(app_data)
@@ -51,7 +56,7 @@ def restart_serial(sender, app_data):
 	
 
 def activateCallback(sender, app_data):
-	CMD_T0_SEND = 'F5'
+	CMD_T0_SEND = '32'
 	ser.write(bytes.fromhex(CMD_T0_SEND))
 
 with dpg.window(label="Interact"):
@@ -60,6 +65,7 @@ with dpg.window(label="Interact"):
 	dpg.add_button(tag="button_connect", label="Connect", callback=restart_serial)
 	dpg.add_text(tag="text_counter", label="Start")
 	dpg.add_button(tag="button_update", label="UPDATE", callback=activateCallback)
+	plot = TimeSeriesWindow("plot", ["encoder"])
 
 dpg.setup_dearpygui()
 dpg.show_viewport()
@@ -67,10 +73,14 @@ dpg.show_viewport()
 restart_serial(None, None)
 while dpg.is_dearpygui_running():
 	CMD_T0_SEND = 'A6'
-	ser.write(bytes.fromhex(CMD_T0_SEND))
-	data = ser.read_until()
-	print(data)
-	dpg.set_value("text_counter", data.decode())
+	#ser.write(bytes.fromhex(CMD_T0_SEND))
+	serial_write(bytes.fromhex(CMD_T0_SEND))
+	data = ser.read_until().decode()
+	print(data[1:])
+	dpg.set_value("text_counter", data)
+	if data[0] == 'd':
+		plot.update_data([[float(data[1:])]])
+	plot.update_plot()
 	dpg.render_dearpygui_frame()
 dpg.destroy_context()
 
