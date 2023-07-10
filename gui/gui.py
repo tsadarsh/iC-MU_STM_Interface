@@ -16,6 +16,12 @@ class Debugger:
 		self.CMD_TO_SEND = ['A6', '00', '00'] # at startup: _SDAD_TRANSMISSION
 		self.com = None
 		self.baudrate = 115200
+		self._tag_SDAD_TRANSMISSION = 'SDAD_TRANSMISSION'
+		self._tag_SDAD_STATUS = 'SDAD_STATUS'
+		self._tag_ACTIVATE = 'ACTIVATE'
+		self._tag_READ_REGISTER = 'READ_REGISTER'
+		self._tag_WRITE_REGISTER = 'WRITE_REGISTER'
+		self._tag_REGISTER_STATUS_DATA = 'REGISTER_STATUS_DATA'
 		self._SDAD_TRANSMISSION = ['A6', '00', '00'] 
 		self._REGISTER_READ_CMD = ['97', '00', '00']
 		self._SDAD_STATUS_CMD = ['F5', '00', '00']
@@ -23,6 +29,7 @@ class Debugger:
 		self.DEVICE_CONNECTED = False
 		self.com = Com()
 		self._write_lock = Lock()
+		self._read_lock = Lock()
 		self._register_details = ["File not found!"]
 	
 	def init_gui(self) -> None:
@@ -52,7 +59,7 @@ class Debugger:
 				items=list(self._register_details.keys())
 			)
 			dpg.add_button(tag="button_read_register", label="Read Register", callback=self._button_read_register_callback)
-			dpg.add_text(tag="text_reg_read", label="Nonee")
+			dpg.add_text(tag="text_read_register", label="Nonee")
 					
 		self.plot = TimeSeriesWindow("plot", ["pos"])
 		self.port = dpg.get_value("input_port_address")
@@ -92,15 +99,23 @@ class Debugger:
 		self.CMD_TO_SEND = self._SDAD_STATUS_CMD
 		with self._write_lock:
 			self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
+		with self._read_lock:
+			data = self.com.read_until()
+			self._process_data_and_update_gui(tag=self._tag_SDAD_STATUS, data=data)
 	
 	def _button_read_register_callback(self, **kwargs):
 		register_name =  dpg.get_value("combo_register_select")
 		self.CMD_TO_SEND = self._REGISTER_READ_CMD
-		for idx, addr in enumerate(self._register_details[register_name]['addr']):
-			# First byte is register read command. Register addr (1 or 2 bytes) follows next.
-			self.CMD_TO_SEND[idx+1] = addr[2:]
-		print(self.CMD_TO_SEND)
-		self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
+		data = b''
+		for i in range(len(self._register_details[register_name]['addr'])):
+			self.CMD_TO_SEND[1] = self._register_details[register_name]['addr'][i][2:]
+			print(self.CMD_TO_SEND)
+			with self._write_lock:
+				self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
+			with self._read_lock:
+				data += self.com.read_until()
+
+		self._process_data_and_update_gui(tag=self._tag_READ_REGISTER, data=data)
 
 	def _button_connect_callback(self, **kwargs):
 		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=self.baudrate)):
@@ -110,15 +125,20 @@ class Debugger:
 			self.DEVICE_CONNECTED = False
 			self._update_dynamic_textures("fail")
 
-	def _process_data_and_update_gui(self, data):
-		dpg.set_value("text_counter", data)
-		if data[0] == 'd':
-			#plot_data_in_batch(float(data[1:]))
-			self.plot.update_data([[float(data[1:])]])
-		elif data[0] == 's':
-			self._sdad_status_display_update(int(data[1:]))
-		elif data[0] == 'p':
-			dpg.set_value("text_reg_read", data[1:])
+	def _process_data_and_update_gui(self, tag, data):
+		if len(data) == 0:	
+			dpg.set_value("text_counter", "No data received in the last second!")
+			return
+		
+		# Process data only if received
+		data = data.decode()
+		if tag == self._tag_SDAD_TRANSMISSION:
+			self.plot.update_data([[float(data)]])
+		elif tag == self._tag_SDAD_STATUS:
+			self._sdad_status_display_update(int(data))
+		elif tag == self._tag_READ_REGISTER:
+			dpg.set_value("text_read_register", data)
+
 		self.plot.update_plot()
 
 	def mainloop(self):
@@ -126,9 +146,10 @@ class Debugger:
 			if self.DEVICE_CONNECTED:
 				with self._write_lock:
 					self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self._DEFAULT_CMD))) # TODO: Handle when connection breaks
-					data = self.com.read_until().decode()
+				with self._read_lock:	
+					data = self.com.read_until()
 					print(data[:])
-					self._process_data_and_update_gui(data=data)
+					self._process_data_and_update_gui(tag=self._tag_SDAD_TRANSMISSION, data=data)
 			
 			else:
 				print("No device!")

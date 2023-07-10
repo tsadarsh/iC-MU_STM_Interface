@@ -106,26 +106,21 @@ uint8_t readCMD()
     else if(cmdData[0] == 0xA6)
     {
       // SDAD Transmission
-      printf("d%lu\r\n", get_encoder_data());
+      printf("%lu\r\n", get_encoder_data());
     }
     else if(cmdData[0] == 0xF5)
     {
       // SDAD Status (No latch)
       mu_sdad_status(&sdadStatus, 1);
-      printf("s%d\r\n", sdadStatus);
+      printf("%d\r\n", sdadStatus);
     }
     else if (cmdData[0] == 0x97)
     {
       // Read REGISTER (single)
-      printf("fu%d %d %d\r\n", cmdData[0], cmdData[1], cmdData[2]);
+      //printf("%d %d %d\r\n", cmdData[0], cmdData[1], cmdData[2]);
       mu_read_register(cmdData[1]);
       mu_register_status_data(&status_rx, &data_rx);
-      printf("p%d,%d\r\n", status_rx, data_rx);
-      if(cmdData[2]) {
-        mu_read_register(cmdData[2]);
-        mu_register_status_data(&status_rx, &data_rx);
-        printf("p%d,%d\r\n", status_rx, data_rx);
-      }
+      printf("%d,%d\r\n", status_rx, data_rx);
     }
     else if (cmdData[0] == 0xD2)
     {
