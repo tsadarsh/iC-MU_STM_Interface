@@ -13,16 +13,17 @@ REGISTER_DETAILS_FILE = "./mu_1sf_driver_registers_data.pkl"
 class Debugger:
 	def __init__(self) -> None:
 		self.SDAD_STATUS_BITS = 8
-		self.CMD_TO_SEND = ['\xA6', '\x00', '\x00'] # at startup: _SDAD_TRANSMISSION
+		self.CMD_TO_SEND = ['A6', '00', '00'] # at startup: _SDAD_TRANSMISSION
 		self.com = None
 		self.baudrate = 115200
-		self._SDAD_TRANSMISSION = ['\xA6', '\x00', '\x00'] 
-		self._REGISTER_READ_CMD = ['\x97', '\x10', '\x00']
-		self._SDAD_STATUS_CMD = ['\xF5', '\x00', '\x00']
+		self._SDAD_TRANSMISSION = ['A6', '00', '00'] 
+		self._REGISTER_READ_CMD = ['97', '00', '00']
+		self._SDAD_STATUS_CMD = ['F5', '00', '00']
 		self._DEFAULT_CMD = self._SDAD_TRANSMISSION
 		self.DEVICE_CONNECTED = False
 		self.com = Com()
 		self._write_lock = Lock()
+		self._register_details = ["File not found!"]
 	
 	def init_gui(self) -> None:
 		dpg.create_context()
@@ -45,12 +46,12 @@ class Debugger:
 			with dpg.group(tag="group_sdad_status_led", horizontal=True):
 				for i in range(8):
 					dpg.add_image(texture_tag=f"image_sdad_status_led_{i}")
-			register_details_dict = self.__load_register_details()
+			self.__load_register_details()
 			dpg.add_combo(
 				tag="combo_register_select",
-				items=list(self.__load_register_details().keys())
+				items=list(self._register_details.keys())
 			)
-			dpg.add_button(tag="button_register_read", label="RR", callback=self._button_register_read_callback)
+			dpg.add_button(tag="button_read_register", label="Read Register", callback=self._button_read_register_callback)
 			dpg.add_text(tag="text_reg_read", label="Nonee")
 					
 		self.plot = TimeSeriesWindow("plot", ["pos"])
@@ -61,10 +62,10 @@ class Debugger:
 		dpg.setup_dearpygui()
 		dpg.show_viewport()
 
-	def __load_register_details(self) -> dict:
+	def __load_register_details(self) -> None:
+		# TODO: Handle if file not exits
 		with open(REGISTER_DETAILS_FILE, 'rb') as f:
-			return pickle.load(f)
-		print("Register details file not found!")
+			self._register_details = pickle.load(f)
 
 	def _update_sdad_status_textures(self, data) -> None:
 		for i in range(self.SDAD_STATUS_BITS):
@@ -90,11 +91,16 @@ class Debugger:
 	def _button_sdad_status_callback(self, **kwargs):
 		self.CMD_TO_SEND = self._SDAD_STATUS_CMD
 		with self._write_lock:
-			self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
+			self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
 	
-	def _button_register_read_callback(self, **kwargs):
+	def _button_read_register_callback(self, **kwargs):
+		register_name =  dpg.get_value("combo_register_select")
 		self.CMD_TO_SEND = self._REGISTER_READ_CMD
-		self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
+		for idx, addr in enumerate(self._register_details[register_name]['addr']):
+			# First byte is register read command. Register addr (1 or 2 bytes) follows next.
+			self.CMD_TO_SEND[idx+1] = addr[2:]
+		print(self.CMD_TO_SEND)
+		self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
 
 	def _button_connect_callback(self, **kwargs):
 		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=self.baudrate)):
@@ -119,7 +125,7 @@ class Debugger:
 		while dpg.is_dearpygui_running():
 			if self.DEVICE_CONNECTED:
 				with self._write_lock:
-					self.com.write(bytearray([ord(i) for i in self._DEFAULT_CMD])) # TODO: Handle when connection breaks
+					self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self._DEFAULT_CMD))) # TODO: Handle when connection breaks
 					data = self.com.read_until().decode()
 					print(data[:])
 					self._process_data_and_update_gui(data=data)

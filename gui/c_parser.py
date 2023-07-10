@@ -20,29 +20,25 @@ def parse_c_file(file_path):
         pattern = r'const struct mu_param\s+(\w+)\s*=\s*{\s*(.*?)\s*};'
 
         matches = re.findall(pattern, file_content, re.DOTALL)
+        #pprint(matches)
 
-        for match in matches:
-            struct_name, struct_content = match
-            struct_dict[struct_name] = {}
+        pattern = r'\.(\w+)\s*=\s*({[^}]+}|\d+|0x[\da-fA-F]+)'
 
-            # Extract struct elements and their values
-            element_pattern = r'\.(\w+)\s*=\s*({.*?}|[^,]+)(?=,|\s*\})'
-            element_matches = re.findall(element_pattern, struct_content)
-
-            for element_match in element_matches:
-                element_name, element_value = element_match
-
-                # Exclude curly brackets from addr value
-                if element_name == 'addr' and element_value.startswith('{'):
-                    element_value = element_value[1:]
-                if element_name == 'addr' and element_value.endswith('}'):
-                    element_value = element_value[:-1]
-
-                struct_dict[struct_name][element_name] = element_value.strip()
+        for register_name, register_details in matches:
+            # Convert to dictionary
+            result = {}
+            matches = re.findall(pattern, register_details)
+            #pprint(matches)
+            for key, value in matches:
+                if key == 'addr':
+                    value = [x.strip() for x in value.strip('{}').split(',')]
+                result[key] = value
+            struct_dict[register_name] = result
 
     return struct_dict
 
-# Usage example
+
+# # Usage example
 file_path = 'mu_1sf_driver.c'
 result = parse_c_file(file_path)
 pprint(result)
