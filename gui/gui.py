@@ -6,17 +6,15 @@ from functools import partial
 import status_color as col
 from gui_serial import Communication as Com
 
-class GUI:
+class Debugger:
 	def __init__(self) -> None:
 		self.SDAD_STATUS_BITS = 8
-		self.CMD_TO_SEND = []
+		self.CMD_TO_SEND = ['\x97', '\x10', '\x00'] # at startup: _REGISTER_READ_CMD
 		self.com = None
+		self.baudrate = 115200
 		self._REGISTER_READ_CMD = ['\x97', '\x10', '\x00']
 		self._SDAD_STATUS_CMD = ['\xF5', '\x00', '\x00']
-
-	def establish_serial_comm(self, port, baudrate=15200) -> None:
-		self.com = Com()
-		self.ser = self.com.connect(port=port, baudrate=baudrate)
+		self.DEVICE_CONNECTED = False
 	
 	def init_gui(self) -> None:
 		dpg.create_context()
@@ -33,7 +31,7 @@ class GUI:
 			with dpg.group(tag="group_input_port_address", horizontal=True):
 				dpg.add_input_text(tag="input_port_address", default_value="/dev/ttyACM0")
 				dpg.add_image(texture_tag="image_port_status_indicator")
-			dpg.add_button(tag="button_connect", label="Connect", callback=self.button_connect_callback)
+			dpg.add_button(tag="button_connect", label="Connect", callback=self._button_connect_callback)
 			dpg.add_text(tag="text_counter", label="Start")
 			dpg.add_button(tag="button_sdad_status", label="SDAD STATUS", callback=self._button_sdad_status_callback)
 			with dpg.group(tag="group_sdad_status_led", horizontal=True):
@@ -48,6 +46,14 @@ class GUI:
 
 		dpg.setup_dearpygui()
 		dpg.show_viewport()
+
+	def establish_serial_com(self):
+		self.port = dpg.get_value("input_port_address")
+		self.com = Com()
+		if(self.com.connect(port=self.port, baudrate=self.baudrate)):
+			self.DEVICE_CONNECTED = True
+		else:
+			self.DEVICE_CONNECTED = False
 
 	def _update_sdad_status_textures(self, data) -> None:
 		for i in range(self.SDAD_STATUS_BITS):
@@ -66,7 +72,7 @@ class GUI:
 		elif status == "sdad_status_update":
 			self._update_sdad_status_textures(kwargs["data"])
 
-	def sdad_status_display_update(self, data):
+	def _sdad_status_display_update(self, data):
 		# Send binary representation of data after removing base representation
 		self._update_dynamic_textures("sdad_status_update", data=bin(data)[2:])
 
@@ -78,31 +84,32 @@ class GUI:
 		self.CMD_TO_SEND = self._REGISTER_READ_CMD
 		self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
 
-	def button_connect_callback(self, **kwargs):
-		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=115200)):
+	def _button_connect_callback(self, **kwargs):
+		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=self.baudrate)):
 			self._update_dynamic_textures("success")
 		else:
 			self._update_dynamic_textures("fail")
 
-	def process_data_and_update_gui(self, data):
+	def _process_data_and_update_gui(self, data):
 		dpg.set_value("text_counter", data)
 		if data[0] == 'd':
 			#plot_data_in_batch(float(data[1:]))
 			self.plot.update_data([[float(data[1:])]])
 		elif data[0] == 's':
-			self.sdad_status_display_update(int(data[1:]))
+			self._sdad_status_display_update(int(data[1:]))
 		elif data[0] == 'p':
 			dpg.set_value("text_reg_read", data[1:])
 		self.plot.update_plot()
 
 	def mainloop(self):
 		while dpg.is_dearpygui_running():
-			if self.com is None:
+			if self.DEVICE_CONNECTED is False:
 				return 0 # No serial device found! Did you establish serial communication?
 			
 			self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
 			data = self.com.read_until().decode()
 			print(data[:])
+			self._process_data_and_update_gui(data=data)
 			dpg.render_dearpygui_frame()
 		
 	def kill(self):
