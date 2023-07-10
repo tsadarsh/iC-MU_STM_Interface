@@ -95,43 +95,40 @@ uint32_t get_encoder_data() {
 uint8_t readCMD()
 {
   uint8_t retVal = -1;
-  if (CMD_RECEIVED==true)
-  {
-    //Making a local copy so that the new value if received
-    //while the following code is executed is not used
-    if (cmdData[0] == 0xB0)
-    {
+  if (CMD_RECEIVED==true) {
+    // No need to make a local copy as the next HAL_UART_Receive_IT
+    // is called after all the process below
+    if (cmdData[0] == 0xB0) {
       // ACTIVATE
     }
-    else if(cmdData[0] == 0xA6)
-    {
+    else if(cmdData[0] == 0xA6) {
       // SDAD Transmission
       printf("%lu\r\n", get_encoder_data());
     }
-    else if(cmdData[0] == 0xF5)
-    {
+    else if(cmdData[0] == 0xF5) {
       // SDAD Status (No latch)
       mu_sdad_status(&sdadStatus, 1);
       printf("%d\r\n", sdadStatus);
     }
-    else if (cmdData[0] == 0x97)
-    {
+    else if (cmdData[0] == 0x97) {
       // Read REGISTER (single)
-      //printf("%d %d %d\r\n", cmdData[0], cmdData[1], cmdData[2]);
       mu_read_register(cmdData[1]);
       mu_register_status_data(&status_rx, &data_rx);
       printf("%d,%d\r\n", status_rx, data_rx);
     }
-    else if (cmdData[0] == 0xD2)
-    {
+    else if (cmdData[0] == 0xD2) {
       // Write REGISTER (single)
+      mu_write_register(cmdData[1], cmdData[2]);
+      mu_register_status_data(&status_rx, &data_rx);
+      printf("%d,%d\r\n", status_rx, data_rx);
     }
-    else if (cmdData[0] == 0xAD)
-    {
+    else if (cmdData[0] == 0xAD) {
       // REGISTER status/data
+      mu_register_status_data(&status_rx, &data_rx);
+      printf("%d,%d\r\n", status_rx, data_rx);
     }
     else
-      printf("Error!\r\n");
+      printf("Incorrect OPCODE: %d received at MCU!\r\n", cmdData[0]);
     retVal = 1;
 
     CMD_RECEIVED = false;

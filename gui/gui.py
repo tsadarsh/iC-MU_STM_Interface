@@ -25,6 +25,7 @@ class Debugger:
 		self._SDAD_TRANSMISSION = ['A6', '00', '00'] 
 		self._REGISTER_READ_CMD = ['97', '00', '00']
 		self._SDAD_STATUS_CMD = ['F5', '00', '00']
+		self._REGISTER_WRITE_CMD = ['D2', '00', '00']
 		self._DEFAULT_CMD = self._SDAD_TRANSMISSION
 		self.DEVICE_CONNECTED = False
 		self.com = Com()
@@ -60,6 +61,9 @@ class Debugger:
 			)
 			dpg.add_button(tag="button_read_register", label="Read Register", callback=self._button_read_register_callback)
 			dpg.add_text(tag="text_read_register", label="Nonee")
+			dpg.add_input_text(tag="input_write_register")
+			dpg.add_button(tag="button_write_register", label="Write", callback=self._button_write_register_callback)
+			dpg.add_text(tag="text_write_register")
 					
 		self.plot = TimeSeriesWindow("plot", ["pos"])
 		self.port = dpg.get_value("input_port_address")
@@ -117,6 +121,39 @@ class Debugger:
 
 		self._process_data_and_update_gui(tag=self._tag_READ_REGISTER, data=data)
 
+	def _button_write_register_callback(self, **kwargs):
+		register_name =  dpg.get_value("combo_register_select")
+		data_tx = dpg.get_value("input_write_register").split(',')
+		
+		# Handle if no register is selected from combo box
+		if len(register_name) == 0:
+			data = f"Select register from the drop down list"
+			self._process_data_and_update_gui(tag=self._tag_WRITE_REGISTER, data=data.encode())
+			return
+		
+		if data_tx[0] == '':
+			data = f"Enter data to be written"
+			self._process_data_and_update_gui(tag=self._tag_WRITE_REGISTER, data=data.encode())
+			return
+
+		# Check if there is enough data provided to write
+		if len(data_tx) != len(self._register_details[register_name]['addr']):
+			data = f"Provide {len(self._register_details[register_name]['addr'])} comma seperated HEX values"
+			self._process_data_and_update_gui(tag=self._tag_WRITE_REGISTER, data=data.encode())
+			return
+		
+		data_rx = b''
+		self.CMD_TO_SEND = self._REGISTER_WRITE_CMD
+		for i in range(len(self._register_details[register_name]['addr'])):
+			self.CMD_TO_SEND[1] = self._register_details[register_name]['addr'][i][2:]
+			self.CMD_TO_SEND[2] = data_tx[i]
+			print(self.CMD_TO_SEND)
+			with self._write_lock:
+				self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
+			with self._read_lock:
+				data_rx += self.com.read_until()
+		self._process_data_and_update_gui(tag=self._tag_WRITE_REGISTER, data=data_rx)
+
 	def _button_connect_callback(self, **kwargs):
 		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=self.baudrate)):
 			self.DEVICE_CONNECTED = True
@@ -138,6 +175,8 @@ class Debugger:
 			self._sdad_status_display_update(int(data))
 		elif tag == self._tag_READ_REGISTER:
 			dpg.set_value("text_read_register", data)
+		elif tag == self._tag_WRITE_REGISTER:
+			dpg.set_value("text_write_register", data)
 
 		self.plot.update_plot()
 
