@@ -64,7 +64,9 @@ PUTCHAR_PROTOTYPE
 
 /* USER CODE BEGIN PV */
 bool CMD_RECEIVED = false;
-uint8_t cmdData = 0;
+uint8_t cmdData[3]= {};
+uint8_t status_rx;
+uint8_t data_rx;
 uint8_t sdadStatus;
 uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
 /* USER CODE END PV */
@@ -125,15 +127,21 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start(&htim4);
-  HAL_UART_Receive_IT(&huart2, &cmdData, sizeof(cmdData));
+  HAL_UART_Receive_IT(&huart2, cmdData, sizeof(cmdData));
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    //uint8_t status_rx;
+    //uint8_t data_rx;
+    //mu_sdad_transmission(DATA_RX, sizeof(DATA_RX)/sizeof(DATA_RX[0]));
+    //mu_read_register(MU_SPO_1.addr[0]);
+    //mu_register_status_data(&status_rx, &data_rx);
+    //printf("%d %d\r\n", status_rx, data_rx);
     /* USER CODE BEGIN 3 */
-    readCMD();
+    //readCMD();
     //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     //HAL_Delay(100);
     //printf("%d\r\n", sizeof(cmdData));
@@ -157,39 +165,45 @@ uint8_t readCMD()
   uint8_t retVal = -1;
   if (CMD_RECEIVED==true)
   {
-    CMD_RECEIVED = false;
-    HAL_UART_Receive_IT(&huart2, &cmdData, sizeof(cmdData));
-
-    if (cmdData == 0xB0)
+    //Making a local copy so that the new value if received
+    //while the following code is executed is not used
+    if (cmdData[0] == 0xB0)
     {
       // ACTIVATE
     }
-    else if(cmdData == 0xA6)
+    else if(cmdData[0] == 0xA6)
     {
       // SDAD Transmission
       printf("d%lu\r\n", get_encoder_data());
     }
-    else if(cmdData == 0xF5)
+    else if(cmdData[0] == 0xF5)
     {
       // SDAD Status (No latch)
       mu_sdad_status(&sdadStatus, 1);
       printf("s%d\r\n", sdadStatus);
     }
-    else if (cmdData == 0x97)
+    else if (cmdData[0] == 0x97)
     {
       // Read REGISTER (single)
+      printf("fu%d %d %d\r\n", cmdData[0], cmdData[1], cmdData[2]);
+      mu_read_register(cmdData[1]);
+      mu_register_status_data(&status_rx, &data_rx);
+      printf("p%d,%d\r\n", status_rx, data_rx);
     }
-    else if (cmdData == 0xD2)
+    else if (cmdData[0] == 0xD2)
     {
       // Write REGISTER (single)
     }
-    else if (cmdData == 0xAD)
+    else if (cmdData[0] == 0xAD)
     {
       // REGISTER status/data
     }
     else
       printf("Error!\r\n");
     retVal = 1;
+
+    CMD_RECEIVED = false;
+    HAL_UART_Receive_IT(&huart2, cmdData, sizeof(cmdData));
   }
   return retVal;
 }
