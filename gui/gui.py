@@ -3,9 +3,12 @@ from threading import Lock
 from time import sleep
 from RTPWindows import TimeSeriesWindow
 from functools import partial
+import pickle
 
 import status_color as col
 from gui_serial import Communication as Com
+
+REGISTER_DETAILS_FILE = "./mu_1sf_driver_registers_data.pkl"
 
 class Debugger:
 	def __init__(self) -> None:
@@ -42,6 +45,11 @@ class Debugger:
 			with dpg.group(tag="group_sdad_status_led", horizontal=True):
 				for i in range(8):
 					dpg.add_image(texture_tag=f"image_sdad_status_led_{i}")
+			register_details_dict = self.__load_register_details()
+			dpg.add_combo(
+				tag="combo_register_select",
+				items=list(self.__load_register_details().keys())
+			)
 			dpg.add_button(tag="button_register_read", label="RR", callback=self._button_register_read_callback)
 			dpg.add_text(tag="text_reg_read", label="Nonee")
 					
@@ -52,6 +60,11 @@ class Debugger:
 
 		dpg.setup_dearpygui()
 		dpg.show_viewport()
+
+	def __load_register_details(self) -> dict:
+		with open(REGISTER_DETAILS_FILE, 'rb') as f:
+			return pickle.load(f)
+		print("Register details file not found!")
 
 	def _update_sdad_status_textures(self, data) -> None:
 		for i in range(self.SDAD_STATUS_BITS):
