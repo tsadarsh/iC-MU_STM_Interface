@@ -1,52 +1,20 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2023 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "spi.h"
 #include "usart.h"
 #include "gpio.h"
 #include "tim.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <inttypes.h>
 #include <stdbool.h>
 #include "mu_1sf_driver.h"
-/* USER CODE END Includes */
 
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
 #define ENC_SPI_NCS_PORT GPIOC
 #define ENC_SPI_NCS_PIN GPIO_PIN_1
 #define ENC_SPI &hspi3
 #define ENC_SPI_TIMEOUT 100
 #define ENC_RX_DATA_SIZE_BYTES 3
-/* USER CODE END PD */
 
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
 #ifdef __GNUC__
 #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
 #else
@@ -58,27 +26,18 @@ PUTCHAR_PROTOTYPE
   HAL_UART_Transmit(&huart2, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
   return ch;
 }
-/* USER CODE END PM */
 
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
 bool CMD_RECEIVED = false;
 uint8_t cmdData[3]= {};
 uint8_t status_rx;
 uint8_t data_rx;
 uint8_t sdadStatus;
 uint8_t DATA_RX[ENC_RX_DATA_SIZE_BYTES] = {};
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
-uint8_t readCMD(void);
-/* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+uint8_t readCMD(void);
+
 void mu_spi_transfer(uint8_t *data_tx, uint8_t *data_rx, uint16_t datasize)
 {
   HAL_GPIO_WritePin(ENC_SPI_NCS_PORT, ENC_SPI_NCS_PIN, GPIO_PIN_RESET);
@@ -91,47 +50,20 @@ void mu_wait_us(uint16_t time_us)
   __HAL_TIM_SET_COUNTER(&htim4, 0);
   while(__HAL_TIM_GET_COUNTER(&htim4) < time_us);
 }
-/* USER CODE END 0 */
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
-  /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_SPI3_Init();
   MX_USART1_UART_Init();
   MX_TIM4_Init();
-  /* USER CODE BEGIN 2 */
+
   HAL_TIM_Base_Start(&htim4);
   HAL_UART_Receive_IT(&huart2, cmdData, sizeof(cmdData));
-  /* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
   while (1)
   {
     //uint8_t status_rx;
@@ -141,7 +73,7 @@ int main(void)
     //mu_register_status_data(&status_rx, &data_rx);
     //printf("%d %d\r\n", status_rx, data_rx);
     /* USER CODE BEGIN 3 */
-    //readCMD();
+    readCMD();
     //HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
     //HAL_Delay(100);
     //printf("%d\r\n", sizeof(cmdData));

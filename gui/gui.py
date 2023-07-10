@@ -1,4 +1,5 @@
 import dearpygui.dearpygui as dpg
+from threading import Lock
 from time import sleep
 from RTPWindows import TimeSeriesWindow
 from functools import partial
@@ -9,12 +10,16 @@ from gui_serial import Communication as Com
 class Debugger:
 	def __init__(self) -> None:
 		self.SDAD_STATUS_BITS = 8
-		self.CMD_TO_SEND = ['\x97', '\x10', '\x00'] # at startup: _REGISTER_READ_CMD
+		self.CMD_TO_SEND = ['\xA6', '\x00', '\x00'] # at startup: _SDAD_TRANSMISSION
 		self.com = None
 		self.baudrate = 115200
+		self._SDAD_TRANSMISSION = ['\xA6', '\x00', '\x00'] 
 		self._REGISTER_READ_CMD = ['\x97', '\x10', '\x00']
 		self._SDAD_STATUS_CMD = ['\xF5', '\x00', '\x00']
+		self._DEFAULT_CMD = self._SDAD_TRANSMISSION
 		self.DEVICE_CONNECTED = False
+		self.com = Com()
+		self._write_lock = Lock()
 	
 	def init_gui(self) -> None:
 		dpg.create_context()
@@ -41,19 +46,12 @@ class Debugger:
 			dpg.add_text(tag="text_reg_read", label="Nonee")
 					
 		self.plot = TimeSeriesWindow("plot", ["pos"])
+		self.port = dpg.get_value("input_port_address")
 		dpg.configure_item("plot"+"_win", pos=[250, 0])
 		dpg.set_global_font_scale(1.3)
 
 		dpg.setup_dearpygui()
 		dpg.show_viewport()
-
-	def establish_serial_com(self):
-		self.port = dpg.get_value("input_port_address")
-		self.com = Com()
-		if(self.com.connect(port=self.port, baudrate=self.baudrate)):
-			self.DEVICE_CONNECTED = True
-		else:
-			self.DEVICE_CONNECTED = False
 
 	def _update_sdad_status_textures(self, data) -> None:
 		for i in range(self.SDAD_STATUS_BITS):
@@ -78,7 +76,8 @@ class Debugger:
 
 	def _button_sdad_status_callback(self, **kwargs):
 		self.CMD_TO_SEND = self._SDAD_STATUS_CMD
-		self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
+		with self._write_lock:
+			self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
 	
 	def _button_register_read_callback(self, **kwargs):
 		self.CMD_TO_SEND = self._REGISTER_READ_CMD
@@ -86,8 +85,10 @@ class Debugger:
 
 	def _button_connect_callback(self, **kwargs):
 		if(self.com.connect(port=dpg.get_value("input_port_address"), baudrate=self.baudrate)):
+			self.DEVICE_CONNECTED = True
 			self._update_dynamic_textures("success")
 		else:
+			self.DEVICE_CONNECTED = False
 			self._update_dynamic_textures("fail")
 
 	def _process_data_and_update_gui(self, data):
@@ -103,13 +104,16 @@ class Debugger:
 
 	def mainloop(self):
 		while dpg.is_dearpygui_running():
-			if self.DEVICE_CONNECTED is False:
-				return 0 # No serial device found! Did you establish serial communication?
+			if self.DEVICE_CONNECTED:
+				with self._write_lock:
+					self.com.write(bytearray([ord(i) for i in self._DEFAULT_CMD])) # TODO: Handle when connection breaks
+					data = self.com.read_until().decode()
+					print(data[:])
+					self._process_data_and_update_gui(data=data)
 			
-			self.com.write(bytearray([ord(i) for i in self.CMD_TO_SEND]))
-			data = self.com.read_until().decode()
-			print(data[:])
-			self._process_data_and_update_gui(data=data)
+			else:
+				print("No device!")
+			
 			dpg.render_dearpygui_frame()
 		
 	def kill(self):

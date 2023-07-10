@@ -3,9 +3,10 @@ from gui import Debugger as dbg
 if __name__ == '__main__':
     ui = dbg()
     ui.init_gui()
-    ui.establish_serial_com()
-    if ui.DEVICE_CONNECTED:
-        ui.mainloop()
+
+    ui.mainloop()
+
+    if ui.kill():
+        print("Port closed")
     else:
-        print("No device")
-    ui.kill()
+        print("Exitied but unable to close port")
