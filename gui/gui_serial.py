@@ -27,7 +27,7 @@ class Communication:
     
     def connect(self, port, baudrate=115200):
         try:
-            self.device = serial.Serial(port=port, baudrate=baudrate)
+            self.device = serial.Serial(port=port, baudrate=baudrate, timeout=1)
             return self.device
         except:
             return 0 # error code

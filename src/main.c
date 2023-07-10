@@ -121,6 +121,11 @@ uint8_t readCMD()
       mu_read_register(cmdData[1]);
       mu_register_status_data(&status_rx, &data_rx);
       printf("p%d,%d\r\n", status_rx, data_rx);
+      if(cmdData[2]) {
+        mu_read_register(cmdData[2]);
+        mu_register_status_data(&status_rx, &data_rx);
+        printf("p%d,%d\r\n", status_rx, data_rx);
+      }
     }
     else if (cmdData[0] == 0xD2)
     {
