@@ -115,12 +115,13 @@ class Debugger:
 		data = [] # list elements are of bytes type
 		for i in range(len(self._register_details[register_name]['addr'])):
 			self.CMD_TO_SEND[1] = self._register_details[register_name]['addr'][i][2:]
-			print(self.CMD_TO_SEND)
+			print("CMD_TO_SEND (to read):", self.CMD_TO_SEND)
 			with self._write_lock:
 				self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
 			with self._read_lock:
-				data.append(self.com.read_until())
-		print(data)
+				recv = self.com.read_until()
+				data.append(recv)
+			print("Received:", recv)
 		self._process_data_and_update_gui(tag=self._tag_READ_REGISTER,
 					data=data,
 					len=self._register_details[register_name]['len'],
@@ -152,7 +153,7 @@ class Debugger:
 		for i in range(len(self._register_details[register_name]['addr'])):
 			self.CMD_TO_SEND[1] = self._register_details[register_name]['addr'][i][2:]
 			self.CMD_TO_SEND[2] = data_tx[i]
-			print(self.CMD_TO_SEND)
+			print("CMD_TO_SEND (to write):", self.CMD_TO_SEND)
 			with self._write_lock:
 				self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
 			with self._read_lock:
@@ -178,7 +179,7 @@ class Debugger:
 		# TODO: Check if STATUS byte for all is VALID
 		# TODO: Test if the following logic is correct
 		if len_ % 8 == 0:
-			data_bin = b''
+			data_bin = ''
 			for i in data:
 				data_bin += bin(int(i.decode().rstrip().split(',')[1]))[2:]
 		else:
@@ -186,7 +187,7 @@ class Debugger:
 			byte_to_modify_cleaned = ((byte_to_modify << (8 - (pos + 1))) >> (8 - (len_ % 8)))
 			len_of_byte_modified = len(list(bin(byte_to_modify_cleaned)[2:]))
 			modified_last_byte = '0'*((len_ % 8) - len_of_byte_modified) + bin(byte_to_modify_cleaned)[2:]
-			data_bin = b''
+			data_bin = ''
 			for i in data[:-1]:
 				data_bin += bin(int(i.decode().rstrip().split(',')[1]))[2:]
 			data_bin += modified_last_byte
@@ -208,7 +209,6 @@ class Debugger:
 			data = data.decode()
 			self._sdad_status_display_update(int(data))
 		elif tag == self._tag_READ_REGISTER:
-			print(kwargs)
 			data = self.__process_data_for_read_register(data, pos=int(kwargs['pos']), len_=int(kwargs['len']))
 			dpg.set_value("text_read_register", data)
 		elif tag == self._tag_WRITE_REGISTER:
@@ -225,7 +225,7 @@ class Debugger:
 					self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self._DEFAULT_CMD))) # TODO: Handle when connection breaks
 				with self._read_lock:	
 					data = self.com.read_until()
-					print(data[:])
+					print("mainloop recv:", data[:])
 					self._process_data_and_update_gui(tag=self._tag_SDAD_TRANSMISSION, data=data)
 			else:
 				print("No device!")
