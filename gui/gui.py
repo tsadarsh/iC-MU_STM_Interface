@@ -148,6 +148,9 @@ class Debugger:
 			self._process_data_and_update_gui(tag=self._tag_WRITE_REGISTER, data=data.encode())
 			return
 		
+		# TODO: Can currupt IC if reserved bits are written. It is currently user's responsibility
+		# to first READ the register, modify WRITE value to match the current reserved values (if any)
+		# before performing the WRITE operation. Goal is to make this implicit.  
 		data_rx = b''
 		self.CMD_TO_SEND = self._REGISTER_WRITE_CMD
 		for i in range(len(self._register_details[register_name]['addr'])):
@@ -157,7 +160,9 @@ class Debugger:
 			with self._write_lock:
 				self.com.write(bytearray(b"".join(bytes.fromhex(i) for i in self.CMD_TO_SEND)))
 			with self._read_lock:
-				data_rx += self.com.read_until()
+				recv = self.com.read_until()
+				data_rx += recv
+			print("Recv (after writing):", recv)
 		self._process_data_and_update_gui(
 			tag=self._tag_WRITE_REGISTER,
 			data=data_rx,
