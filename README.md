@@ -1,3 +1,18 @@
+# Usage
+Clone and install python deps in a virtual environment using:
+```
+pip install -r requirements.txt
+```
+
+1. Connect STM32's Nucleo-F401RE and upload the firmware (in `lib/` and `src/`) (PlatformIO).
+2. Connect the encoder PCB to SPI3 pins (see Pinouts below).
+3. Run python `main.py`
+
+Run using python3:
+```
+python3 gui/main.py
+```
+
 # Pinouts
 | Pin | Function |
 |-----|----------|
